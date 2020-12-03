@@ -12,13 +12,14 @@ type TestSystem struct {
 	updateCount     int
 	addedEntities   []*Entity
 	removedEntities []*Entity
+	world           *World
 }
 
 func (s *TestSystem) Add(entity *Entity) {
 	s.addedEntities = append(s.addedEntities, entity)
 }
 
-func (s *TestSystem) Update(_ *World, _ *Entity) {
+func (s *TestSystem) Update(elapsed float32) {
 	s.updateCount++
 }
 
@@ -33,23 +34,37 @@ func (s *TestSystem) RequiredTypes() []interface{} {
 	}
 }
 
-func TestSystemsAddedToWorldAreUpdated(t *testing.T) {
-	world := NewWorld(0)
+func (s *TestSystem) New(world *World) {
+	s.world = world
+}
+
+func TestNewGetsCalledIfProvided(t *testing.T) {
+	world := NewWorld()
 
 	system := &TestSystem{}
 
-	world.AddSystem(system, false)
-	world.Update()
+	world.AddSystem(system)
+
+	assert.Equal(t, world, system.world)
+}
+
+func TestSystemsAddedToWorldAreUpdated(t *testing.T) {
+	world := NewWorld()
+
+	system := &TestSystem{}
+
+	world.AddSystem(system)
+	world.Update(1)
 
 	assert.Equal(t, 1, system.updateCount)
 }
 
 func TestEntitiesAreAddedToRelevantSystemsWhenAddedToWorld(t *testing.T) {
 
-	world := NewWorld(0)
+	world := NewWorld()
 
 	system := &TestSystem{}
-	world.AddSystem(system, false)
+	world.AddSystem(system)
 
 	e := NewEntity()
 	e.Add(&TestComponent{})
@@ -63,10 +78,10 @@ func TestEntitiesAreAddedToRelevantSystemsWhenAddedToWorld(t *testing.T) {
 
 func TestEntitiesAreRemovedFromTheRelevantSystemsWhenRemovedFromWorld(t *testing.T) {
 
-	world := NewWorld(0)
+	world := NewWorld()
 
 	system := &TestSystem{}
-	world.AddSystem(system, false)
+	world.AddSystem(system)
 
 	e := NewEntity()
 	e.Add(&TestComponent{})
@@ -80,10 +95,10 @@ func TestEntitiesAreRemovedFromTheRelevantSystemsWhenRemovedFromWorld(t *testing
 }
 
 func TestComponentsAreAddedToEntitiesAndEntitiesToRelevantSystems(t *testing.T) {
-	world := NewWorld(0)
+	world := NewWorld()
 
 	system := &TestSystem{}
-	world.AddSystem(system, false)
+	world.AddSystem(system)
 
 	e := NewEntity()
 
@@ -103,10 +118,10 @@ func TestComponentsAreAddedToEntitiesAndEntitiesToRelevantSystems(t *testing.T) 
 }
 
 func TestComponentsAreRemovedFromEntitiesAndEntitiesFromRelevantSystems(t *testing.T) {
-	world := NewWorld(0)
+	world := NewWorld()
 
 	system := &TestSystem{}
-	world.AddSystem(system, false)
+	world.AddSystem(system)
 
 	testComponent := &TestComponent{}
 

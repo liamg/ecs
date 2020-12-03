@@ -8,42 +8,17 @@ import (
 
 type World struct {
 	registrations []systemRegistration
-	done          bool
-	turn          int64
 	entities      []*Entity
 	player        *Entity
 }
 
 type systemRegistration struct {
-	system     System
-	types      []reflect.Type
-	repeatable bool
+	system System
+	types  []reflect.Type
 }
 
-func NewWorld(turn int64) *World {
-	return &World{
-		turn: turn,
-	}
-}
-
-func (w *World) UseTurn() {
-	w.turn++
-}
-
-func (w *World) SetPlayer(p *Entity) {
-	w.player = p
-}
-
-func (w *World) GetTurn() int64 {
-	return w.turn
-}
-
-func (w *World) Close() {
-	w.done = true
-}
-
-func (w *World) Done() bool {
-	return w.done
+func NewWorld() *World {
+	return &World{}
 }
 
 func (w *World) GetEntity(id uuid.UUID) *Entity {
@@ -56,7 +31,7 @@ func (w *World) GetEntity(id uuid.UUID) *Entity {
 }
 
 // repeatable refer st osystems that can be run without incrementing game state, i.e. renderers etc.
-func (w *World) AddSystem(system System, repeatable bool) {
+func (w *World) AddSystem(system System) {
 
 	var refTypes []reflect.Type
 	for _, t := range system.RequiredTypes() {
@@ -64,9 +39,8 @@ func (w *World) AddSystem(system System, repeatable bool) {
 	}
 
 	reg := systemRegistration{
-		system:     system,
-		types:      refTypes,
-		repeatable: repeatable,
+		system: system,
+		types:  refTypes,
 	}
 
 	for _, e := range w.entities {
@@ -75,6 +49,7 @@ func (w *World) AddSystem(system System, repeatable bool) {
 			var found bool
 			for _, c := range e.Store.components {
 				found = reflect.TypeOf(c.Inner).Implements(t)
+				//fmt.Printf("%v implements %v = %v\n", reflect.TypeOf(c.Inner).Name(), t.Name(), found)
 				if found {
 					break
 				}
@@ -90,29 +65,16 @@ func (w *World) AddSystem(system System, repeatable bool) {
 	}
 
 	w.registrations = append(w.registrations, reg)
-}
 
-func (w *World) Run() {
-	w.UpdateRepeatable()
-	for {
-		w.Update()
-		if w.Done() {
-			break
-		}
+	s, ok := system.(SystemInitializer)
+	if ok {
+		s.New(w)
 	}
 }
 
-func (w *World) Update() {
+func (w *World) Update(elapsed float32) {
 	for _, reg := range w.registrations {
-		reg.system.Update(w, w.player)
-	}
-}
-
-func (w *World) UpdateRepeatable() {
-	for _, reg := range w.registrations {
-		if reg.repeatable {
-			reg.system.Update(w, w.player)
-		}
+		reg.system.Update(elapsed)
 	}
 }
 
