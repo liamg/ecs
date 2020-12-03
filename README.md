@@ -1,4 +1,8 @@
 # ECS
 
-No docs yet, just open sourced for Kev :p
+Simple Entity Component System written in Go.
+
+
+
+
 
